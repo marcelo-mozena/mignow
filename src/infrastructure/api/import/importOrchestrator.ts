@@ -1,4 +1,4 @@
-import type { ValidationError } from '@/shared/types';
+import type { ValidationError, ImportSummary } from '@/shared/types';
 import type { IImportService, ImportContext } from '@/domain/interfaces/IImportService';
 import { parseFile } from '@/shared/utils/fileParser';
 
@@ -48,11 +48,30 @@ export async function executeImport(
   dataType: string,
   file: File,
   ctx: ImportContext
-): Promise<void> {
+): Promise<ImportSummary> {
   const service = getService(dataType);
   const records = await parseFile(file);
 
-  for (const record of records) {
-    await service.importRecord(ctx, record);
+  const summary: ImportSummary = {
+    total: records.length,
+    imported: 0,
+    failed: 0,
+    errors: [],
+  };
+
+  for (let i = 0; i < records.length; i++) {
+    try {
+      await service.importRecord(ctx, records[i]);
+      summary.imported++;
+    } catch (err: any) {
+      summary.failed++;
+      summary.errors.push({
+        row: i + 1,
+        field: 'API',
+        error: err.message || 'Erro desconhecido ao importar registro.',
+      });
+    }
   }
+
+  return summary;
 }

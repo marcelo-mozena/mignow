@@ -31,7 +31,7 @@ import {
 
 // --- Types ---
 
-import type { ValidationError } from '@/shared/types';
+import type { ValidationError, ImportSummary } from '@/shared/types';
 
 export type { ValidationError };
 
@@ -55,7 +55,7 @@ interface ImportTabProps {
   /** Called when the user clicks "Validar" */
   onValidate?: (dataType: string, file: File) => Promise<ValidationError[]>;
   /** Called when the user clicks "Importar" */
-  onImport?: (dataType: string, file: File) => Promise<void>;
+  onImport?: (dataType: string, file: File) => Promise<ImportSummary>;
 }
 
 // --- Component ---
@@ -65,6 +65,7 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<ImportStep>('select');
   const [errors, setErrors] = useState<ValidationError[]>([]);
+  const [summary, setSummary] = useState<ImportSummary | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentStep: ImportStep = (() => {
@@ -84,6 +85,7 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
     setSelectedData(value);
     setFile(null);
     setErrors([]);
+    setSummary(null);
     setStep('select');
   }, []);
 
@@ -91,6 +93,7 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
     const selected = e.target.files?.[0] ?? null;
     setFile(selected);
     setErrors([]);
+    setSummary(null);
     setStep('validate');
   }, []);
 
@@ -98,6 +101,7 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
     if (!file || !selectedData) return;
     setStep('validating');
     setErrors([]);
+    setSummary(null);
     try {
       const result = onValidate ? await onValidate(selectedData, file) : [];
       setErrors(result);
@@ -111,8 +115,15 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
   const handleImport = useCallback(async () => {
     if (!file || !selectedData) return;
     setStep('importing');
+    setSummary(null);
     try {
-      if (onImport) await onImport(selectedData, file);
+      if (onImport) {
+        const result = await onImport(selectedData, file);
+        setSummary(result);
+        if (result.errors.length > 0) {
+          setErrors(result.errors);
+        }
+      }
       setStep('imported');
     } catch {
       setErrors([{ field: 'Geral', error: 'Erro inesperado ao importar o arquivo.' }]);
@@ -124,6 +135,7 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
     setSelectedData('');
     setFile(null);
     setErrors([]);
+    setSummary(null);
     setStep('select');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
@@ -242,18 +254,53 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
         )}
       </div>
 
-      {/* Success message */}
+      {/* Success message & Summary */}
       {currentStep === 'imported' && (
-        <div className="flex items-center gap-3 rounded-md border border-bp-green-2/40 bg-bp-green-1/20 p-4 text-bp-green-5">
-          <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium">
-              Importação de &quot;{selectedLabel}&quot; concluída com sucesso!
-            </p>
+        <div className="space-y-4">
+          <div
+            className={`flex items-center gap-3 rounded-md border p-4 ${
+              summary?.failed && summary.failed > 0
+                ? 'border-yellow-200 bg-yellow-50 text-yellow-800'
+                : 'border-bp-green-2/40 bg-bp-green-1/20 text-bp-green-5'
+            }`}
+          >
+            {summary?.failed && summary.failed > 0 ? (
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+            ) : (
+              <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+            )}
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                Importação de &quot;{selectedLabel}&quot; concluída.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              Nova importação
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={handleReset}>
-            Nova importação
-          </Button>
+
+          {summary && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-lg border bg-card p-4 shadow-sm">
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Total Processado
+                </div>
+                <div className="mt-1 text-2xl font-bold">{summary.total}</div>
+              </div>
+              <div className="rounded-lg border bg-card p-4 shadow-sm">
+                <div className="text-xs font-medium text-bp-green-5 uppercase tracking-wider">
+                  Importado com Sucesso
+                </div>
+                <div className="mt-1 text-2xl font-bold text-bp-green-5">{summary.imported}</div>
+              </div>
+              <div className="rounded-lg border bg-card p-4 shadow-sm">
+                <div className="text-xs font-medium text-destructive uppercase tracking-wider">
+                  Falhas
+                </div>
+                <div className="mt-1 text-2xl font-bold text-destructive">{summary.failed}</div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -267,14 +314,15 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
         </div>
       )}
 
-      {/* Validation errors table */}
+      {/* Errors table (Validation or Import) */}
       {errors.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm font-medium text-destructive">
               <AlertTriangle className="h-4 w-4" />
               {errors.length} erro{errors.length > 1 ? 's' : ''} encontrado
-              {errors.length > 1 ? 's' : ''} na validação
+              {errors.length > 1 ? 's' : ''}{' '}
+              {currentStep === 'imported' ? 'na importação' : 'na validação'}
             </div>
             <div className="relative w-64">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />

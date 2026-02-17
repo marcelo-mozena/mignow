@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { ValidationError } from '@/shared/types';
+import type { ValidationError, ImportSummary } from '@/shared/types';
 import type { ImportContext } from '@/domain/interfaces/IImportService';
 import { validateImport, executeImport } from '@/infrastructure/api/import/importOrchestrator';
 import { useAuthStore, getBaseUrl, type Environment } from '@/presentation/stores/useAuthStore';
@@ -35,9 +35,9 @@ export function useImport() {
   );
 
   const onImport = useCallback(
-    async (dataType: string, file: File): Promise<void> => {
+    async (dataType: string, file: File): Promise<ImportSummary> => {
       const ctx = getContext();
-      await executeImport(dataType, file, ctx);
+      return executeImport(dataType, file, ctx);
     },
     [getContext]
   );

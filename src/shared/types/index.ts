@@ -23,6 +23,13 @@ export interface ValidationError {
   error: string;
 }
 
+export interface ImportSummary {
+  total: number;
+  imported: number;
+  failed: number;
+  errors: ValidationError[];
+}
+
 /**
  * Represents a single API request log entry.
  * Defined here so Infrastructure (apiClient) and Presentation (stores, footer)
