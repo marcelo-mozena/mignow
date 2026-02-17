@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Blueprint Light — grayscale palette */
+    --background: 0 0% 100%;
+    --foreground: 214.3 17.1% 8%;
+    --card: 220 20% 97.1%;
+    --card-foreground: 214.3 17.1% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 214.3 17.1% 8%;
+    --primary: 214.9 64.7% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 212.7 14.3% 84.9%;
+    --secondary-foreground: 214.3 17.1% 8%;
+    --muted: 214.3 13.7% 80%;
+    --muted-foreground: 215.2 13.2% 42.9%;
+    --accent: 214.8 68.4% 41%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 358.3 58.2% 53.1%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214.3 13.7% 80%;
+    --input: 212.7 14.3% 84.9%;
+    --ring: 214.9 64.7% 50%;
+    --radius: 0.5rem;
+
+    /* Extended palette */
+    --success: 148.2 58.3% 32.9%;
+    --success-foreground: 0 0% 100%;
+    --warning: 31.9 77.8% 44.1%;
+    --warning-foreground: 0 0% 100%;
+    --info: 215.1 84.5% 62%;
+    --info-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    /* Blueprint Dark — DARK_GRAY1 background */
+    --background: 212.7 16.4% 13.1%;
+    --foreground: 220 20% 97.1%;
+    --card: 215 14% 16.9%;
+    --card-foreground: 220 20% 97.1%;
+    --popover: 215 14% 16.9%;
+    --popover-foreground: 220 20% 97.1%;
+    --primary: 214.9 64.7% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 216 11.8% 24.9%;
+    --secondary-foreground: 214.3 13.7% 80%;
+    --muted: 216.9 12.1% 21%;
+    --muted-foreground: 216 12.6% 61%;
+    --accent: 216 11.8% 24.9%;
+    --accent-foreground: 220 20% 97.1%;
+    --destructive: 358.3 58.2% 53.1%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 216 11.8% 24.9%;
+    --input: 216.9 12.1% 21%;
+    --ring: 215.1 84.5% 62%;
+
+    /* Extended palette */
+    --success: 148.2 58.3% 32.9%;
+    --success-foreground: 0 0% 100%;
+    --warning: 31.9 77.8% 44.1%;
+    --warning-foreground: 0 0% 100%;
+    --info: 215.1 84.5% 62%;
+    --info-foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
