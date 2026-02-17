@@ -1,4 +1,4 @@
-import type { ValidationError } from '@/presentation/components/features/import/ImportTab';
+import type { ValidationError } from '@/shared/types';
 import type { IImportService, ImportContext } from '@/domain/interfaces/IImportService';
 import { parseFile } from '@/shared/utils/fileParser';
 

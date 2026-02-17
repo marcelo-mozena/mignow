@@ -1,4 +1,4 @@
-import type { ValidationError } from '@/presentation/components/features/import/ImportTab';
+import type { ValidationError } from '@/shared/types';
 
 /**
  * Context for import operations — carries auth + org info.

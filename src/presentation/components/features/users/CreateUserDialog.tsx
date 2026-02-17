@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { useCreateUser } from '@/presentation/hooks/useCreateUser';
 import { UserRole } from '@/domain/entities/User';
 import { Button } from '@/presentation/components/ui/button';
@@ -22,14 +23,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/presentation/components/ui/dialog';
-import { useToast } from '@/presentation/components/ui/use-toast';
 
 export const CreateUserDialog: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<UserRole>(UserRole.USER);
-  const { toast } = useToast();
   const createUser = useCreateUser();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,20 +36,14 @@ export const CreateUserDialog: React.FC = () => {
 
     try {
       await createUser.mutateAsync({ email, name, role });
-      toast({
-        title: 'Success',
-        description: 'User created successfully',
-      });
+      toast.success('User created successfully');
       setOpen(false);
       setEmail('');
       setName('');
       setRole(UserRole.USER);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create user',
-        variant: 'destructive',
-      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to create user';
+      toast.error(message);
     }
   };
 

@@ -1,4 +1,14 @@
-import { setRequestLog } from '@/presentation/stores/useRequestLogStore';
+import type { RequestLogEntry } from '@/shared/types';
+
+// --- Request Logger (pluggable — wired at app init, avoids cross-layer dep) ---
+
+type RequestLogger = (entry: RequestLogEntry) => void;
+let logRequest: RequestLogger = () => {};
+
+/** Call once at startup to connect the API client to the request log store. */
+export function setRequestLogger(logger: RequestLogger) {
+  logRequest = logger;
+}
 
 // --- Error Types ---
 
@@ -63,7 +73,7 @@ export async function apiRequest<T>(url: string, options: RequestInit): Promise<
   if (requestBody) console.log('Body:', requestBody);
   console.groupEnd();
 
-  setRequestLog({
+  logRequest({
     method,
     url,
     status: 'pending',
@@ -77,7 +87,7 @@ export async function apiRequest<T>(url: string, options: RequestInit): Promise<
     response = await fetch(url, options);
   } catch (err) {
     console.error(`[API Error] ${method} ${url} — Erro de conexão`, err);
-    setRequestLog({
+    logRequest({
       method,
       url,
       status: 'error',
@@ -101,7 +111,7 @@ export async function apiRequest<T>(url: string, options: RequestInit): Promise<
       `[API Response] ${method} ${url} — Status: ${response.status} — Code: ${errorInfo.errorCode ?? 'N/A'}`,
       body
     );
-    setRequestLog({
+    logRequest({
       method,
       url,
       status: 'error',
@@ -119,7 +129,7 @@ export async function apiRequest<T>(url: string, options: RequestInit): Promise<
   console.log('Data:', data);
   console.groupEnd();
 
-  setRequestLog({
+  logRequest({
     method,
     url,
     status: 'success',

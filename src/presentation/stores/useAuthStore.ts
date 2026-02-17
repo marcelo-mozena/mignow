@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useSyncExternalStore } from 'react';
+import { createStore } from './createStore';
 
 // --- Types ---
 
@@ -30,56 +31,25 @@ export function getBaseUrl(env: Environment): string {
 
 // --- Store ---
 
-let state: AuthState = {
+const store = createStore<AuthState>({
   userEmail: '',
   environment: '',
   setupMode: '',
   authToken: '',
   screen: 'login',
-};
-
-const listeners = new Set<() => void>();
-
-function emitChange() {
-  listeners.forEach(listener => listener());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function getSnapshot(): AuthState {
-  return state;
-}
-
-function setState(partial: Partial<AuthState>) {
-  state = { ...state, ...partial };
-  emitChange();
-}
-
-function resetState() {
-  state = {
-    userEmail: '',
-    environment: '',
-    setupMode: '',
-    authToken: '',
-    screen: 'login',
-  };
-  emitChange();
-}
+});
 
 // --- Hook ---
 
 export function useAuthStore() {
-  const current = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const current = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 
-  const setUserEmail = useCallback((email: string) => setState({ userEmail: email }), []);
-  const setEnvironment = useCallback((env: Environment) => setState({ environment: env }), []);
-  const setSetupMode = useCallback((mode: SetupMode) => setState({ setupMode: mode }), []);
-  const setAuthToken = useCallback((token: string) => setState({ authToken: token }), []);
-  const setScreen = useCallback((screen: AuthState['screen']) => setState({ screen }), []);
-  const logout = useCallback(() => resetState(), []);
+  const setUserEmail = useCallback((email: string) => store.setState({ userEmail: email }), []);
+  const setEnvironment = useCallback((env: Environment) => store.setState({ environment: env }), []);
+  const setSetupMode = useCallback((mode: SetupMode) => store.setState({ setupMode: mode }), []);
+  const setAuthToken = useCallback((token: string) => store.setState({ authToken: token }), []);
+  const setScreen = useCallback((screen: AuthState['screen']) => store.setState({ screen }), []);
+  const logout = useCallback(() => store.reset(), []);
 
   return {
     ...current,

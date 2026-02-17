@@ -31,15 +31,13 @@ import {
 
 // --- Types ---
 
+import type { ValidationError } from '@/shared/types';
+
+export type { ValidationError };
+
 export interface ImportOption {
   value: string;
   label: string;
-}
-
-export interface ValidationError {
-  row?: number;
-  field: string;
-  error: string;
 }
 
 type ImportStep =

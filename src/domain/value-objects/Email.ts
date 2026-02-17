@@ -17,6 +17,11 @@ export class Email {
     return emailRegex.test(email);
   }
 
+  /** Public validation check — reuse in presentation layer to avoid regex duplication. */
+  public static validate(email: string): boolean {
+    return this.isValid(email);
+  }
+
   public equals(other: Email): boolean {
     return this.value === other.value;
   }

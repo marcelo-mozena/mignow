@@ -6,13 +6,7 @@ import { showErrorToast } from '@/presentation/utils/errorToast';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/presentation/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -25,8 +19,7 @@ import { Spinner } from '@/presentation/components/ui/spinner';
 import { SilLogo } from '@/presentation/components/ui/sil-logo';
 import { useAuthStore, type Environment, type SetupMode } from '@/presentation/stores/useAuthStore';
 import { sendOtp, ApiError } from '@/infrastructure/api/authApi';
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { Email } from '@/domain/value-objects/Email';
 
 const ENVIRONMENT_OPTIONS: { value: Environment; label: string }[] = [
   { value: 'test', label: 'Test' },
@@ -48,7 +41,7 @@ export function LoginScreen() {
 
   const [loading, setLoading] = useState(false);
 
-  const isEmailValid = EMAIL_REGEX.test(userEmail);
+  const isEmailValid = Email.validate(userEmail);
   const isFormValid = isEmailValid && environment !== '' && setupMode !== '';
 
   async function handleSendOtp() {
@@ -78,7 +71,6 @@ export function LoginScreen() {
             <SilLogo className="h-8 text-foreground" />
           </div>
           <CardTitle className="text-2xl">SSP Migration Wizard</CardTitle>
-          <CardDescription>Ferramenta de Configuração</CardDescription>
         </CardHeader>
         <CardContent>
           <form

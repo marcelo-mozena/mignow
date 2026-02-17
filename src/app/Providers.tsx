@@ -6,6 +6,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/presentation/components/ui/sonner';
 import { CQRSProvider } from '@/presentation/providers/CQRSProvider';
 import { ErrorBoundary } from '@/shared/errors/ErrorBoundary';
+import { setRequestLogger } from '@/infrastructure/api/apiClient';
+import { setRequestLog } from '@/presentation/stores/useRequestLogStore';
+import { initImportServices } from '@/infrastructure/api/import/registry';
+
+// --- App-level wiring (runs once on module load) ---
+setRequestLogger(setRequestLog);
+initImportServices();
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(

@@ -1,0 +1,9 @@
+{
+  "files": [
+    "README.md",
+    "manifest.json",
+    "veiculos.csv",
+    "veiculos_fabricantes.csv",
+    "veiculos_modelos.csv"
+  ]
+}

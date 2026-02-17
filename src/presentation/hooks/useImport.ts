@@ -1,13 +1,9 @@
 import { useCallback } from 'react';
-import type { ValidationError } from '@/presentation/components/features/import/ImportTab';
+import type { ValidationError } from '@/shared/types';
 import type { ImportContext } from '@/domain/interfaces/IImportService';
 import { validateImport, executeImport } from '@/infrastructure/api/import/importOrchestrator';
-import { initImportServices } from '@/infrastructure/api/import/registry';
 import { useAuthStore, getBaseUrl, type Environment } from '@/presentation/stores/useAuthStore';
 import { useOrgStore } from '@/presentation/stores/useOrgStore';
-
-// Initialize services eagerly (module-level, runs once on first import)
-initImportServices();
 
 /**
  * Hook that provides onValidate and onImport callbacks

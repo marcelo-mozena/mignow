@@ -1,5 +1,7 @@
 import { registerImportService } from '@/infrastructure/api/import/importOrchestrator';
 import { VeiculoImportService } from '@/infrastructure/api/import/VeiculoImportService';
+import { VeiculoFabricanteImportService } from '@/infrastructure/api/import/VeiculoFabricanteImportService';
+import { VeiculoModeloImportService } from '@/infrastructure/api/import/VeiculoModeloImportService';
 
 let initialized = false;
 
@@ -12,6 +14,8 @@ export function initImportServices() {
   if (initialized) return;
 
   registerImportService('veiculos', new VeiculoImportService());
+  registerImportService('veiculos-fabricantes', new VeiculoFabricanteImportService());
+  registerImportService('veiculos-modelos', new VeiculoModeloImportService());
   // registerImportService('clientes', new ClienteImportService());
   // registerImportService('fornecedores', new FornecedorImportService());
 

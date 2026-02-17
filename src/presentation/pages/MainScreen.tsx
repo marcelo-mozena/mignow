@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Building2, LogOut, Mail, Server, Settings } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import { Building2, Download, LogOut, Mail, Server, Settings } from 'lucide-react';
 import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Separator } from '@/presentation/components/ui/separator';
@@ -19,16 +19,14 @@ import { SilLogo } from '@/presentation/components/ui/sil-logo';
 import { useImport } from '@/presentation/hooks/useImport';
 import { useAuthStore } from '@/presentation/stores/useAuthStore';
 import { useOrgStore } from '@/presentation/stores/useOrgStore';
+import { downloadTemplatesZip } from '@/presentation/utils/downloadTemplates';
 
 // --- Import options per tab ---
 
 const DADOS_MESTRE_OPTIONS: ImportOption[] = [
   { value: 'veiculos', label: 'Veículos' },
-  { value: 'clientes', label: 'Clientes' },
-  { value: 'fornecedores', label: 'Fornecedores' },
-  { value: 'produtos', label: 'Produtos' },
-  { value: 'centros-custo', label: 'Centros de Custo' },
-  { value: 'plano-contas', label: 'Plano de Contas' },
+  { value: 'veiculos-fabricantes', label: 'Veículos Fabricantes' },
+  { value: 'veiculos-modelos', label: 'Veículos Modelos' },
 ];
 
 const TORRE_CONTROLE_OPTIONS: ImportOption[] = [
@@ -79,6 +77,18 @@ export function MainScreen() {
     setSelectedCompany,
   } = useOrgStore();
   const { onValidate, onImport } = useImport();
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadTemplates = useCallback(async () => {
+    setDownloading(true);
+    try {
+      await downloadTemplatesZip();
+    } catch (err) {
+      console.error('Erro ao baixar templates:', err);
+    } finally {
+      setDownloading(false);
+    }
+  }, []);
 
   const companies = selectedOrg?.companies ?? [];
 
@@ -168,8 +178,17 @@ export function MainScreen() {
       <main className="mx-auto max-w-5xl space-y-6 p-6">
         {/* Import Tabs */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Importação de Dados</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadTemplates}
+              disabled={downloading}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {downloading ? 'Baixando...' : 'Download Templates'}
+            </Button>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="dados-mestre">

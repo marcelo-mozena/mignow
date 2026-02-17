@@ -3,7 +3,7 @@ import { UpdateUserCommand } from './UpdateUserCommand';
 import { User, UserRole } from '../../../domain/entities/User';
 import { IUserRepository } from '../../../domain/interfaces/repositories/IUserRepository';
 import { IEventBus } from '../../../domain/interfaces/IEventBus';
-import { Result } from '../../../shared/errors/Result';
+import { Result } from '../../../domain/Result';
 import { ValidationError, NotFoundError } from '../../../shared/errors/AppError';
 import { UserUpdatedEvent } from '../../events/UserUpdatedEvent';
 

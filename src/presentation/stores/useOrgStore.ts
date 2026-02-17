@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useSyncExternalStore } from 'react';
+import { createStore } from './createStore';
 import type { JwtOrg } from '@/shared/utils/jwt';
 
 // --- Types ---
@@ -16,37 +17,17 @@ export interface OrgState {
 
 // --- Store ---
 
-let state: OrgState = {
+const store = createStore<OrgState>({
   userName: '',
   orgs: [],
   selectedOrgId: '',
   selectedCompanyId: '',
   envSaved: false,
   envPath: '',
-};
-
-const listeners = new Set<() => void>();
-
-function emitChange() {
-  listeners.forEach(listener => listener());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function getSnapshot(): OrgState {
-  return state;
-}
-
-function setState(partial: Partial<OrgState>) {
-  state = { ...state, ...partial };
-  emitChange();
-}
+});
 
 export function setOrgsFromJwt(userName: string, orgs: JwtOrg[]) {
-  setState({
+  store.setState({
     userName,
     orgs,
     selectedOrgId: '',
@@ -57,43 +38,32 @@ export function setOrgsFromJwt(userName: string, orgs: JwtOrg[]) {
 }
 
 export function setEnvSaved(envPath: string) {
-  setState({ envSaved: true, envPath });
-}
-
-function resetOrgState() {
-  state = {
-    userName: '',
-    orgs: [],
-    selectedOrgId: '',
-    selectedCompanyId: '',
-    envSaved: false,
-    envPath: '',
-  };
-  emitChange();
+  store.setState({ envSaved: true, envPath });
 }
 
 // --- Derived ---
 
 export function getSelectedOrg(): JwtOrg | undefined {
-  return state.orgs.find(o => o.id === state.selectedOrgId);
+  const s = store.getState();
+  return s.orgs.find(o => o.id === s.selectedOrgId);
 }
 
 // --- Hook ---
 
 export function useOrgStore() {
-  const current = useSyncExternalStore(subscribe, getSnapshot, () => state);
+  const current = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 
   const setSelectedOrg = useCallback((orgId: string) => {
-    setState({ selectedOrgId: orgId, selectedCompanyId: '' });
+    store.setState({ selectedOrgId: orgId, selectedCompanyId: '' });
   }, []);
 
   const setSelectedCompany = useCallback((companyId: string) => {
-    setState({ selectedCompanyId: companyId });
+    store.setState({ selectedCompanyId: companyId });
   }, []);
 
   const selectedOrg = current.orgs.find(o => o.id === current.selectedOrgId);
 
-  const reset = useCallback(() => resetOrgState(), []);
+  const reset = useCallback(() => store.reset(), []);
 
   return {
     ...current,
