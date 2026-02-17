@@ -1,206 +1,59 @@
-# Template Electron + React + Clean Architecture
+# Sil Sistemas Platform mIGRATION wizard
 
-![Electron](https://img.shields.io/badge/Electron-28.0-47848F?style=flat&logo=electron&logoColor=white)
-![React](https://img.shields.io/badge/React-18.2-61DAFB?style=flat&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.2-3178C6?style=flat&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?style=flat&logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind-3.3-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
+Ferramenta desktop robusta para automação e orquestração de migração de dados de grande escala para a Sil Sistemas Platform.
 
-Template moderno para aplicações Electron com React, TypeScript, shadcn/ui, seguindo princípios de Clean Architecture e CQRS.
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![.NET SDK](https://img.shields.io/badge/.NET-8.0-512bd4?logo=dotnet)
+![C# Version](https://img.shields.io/badge/C%23-12-239120?logo=csharp)
+![Database](https://img.shields.io/badge/Database-PostgreSQL-336791?logo=postgresql)
+![Background Services](https://img.shields.io/badge/Services-Hangfire%20%7C%20PubSub%20%7C%20SignalR-red)
 
-## Documentação
+### Sobre o Projeto
 
-- **[AI_GUIDELINES.md](AI_GUIDELINES.md)** - Diretrizes para desenvolvimento com IA
-- **[AMBIENTE_REMOTO.md](AMBIENTE_REMOTO.md)** - Como executar em VS Code remoto/container
+O Sil Sistemas Platform mIGRATION wizard (mignow) é uma aplicação desktop robusta desenvolvida em Electron, React e TypeScript, seguindo rigorosos padrões de Clean Architecture e CQRS. Seu objetivo primordial é automatizar e orquestrar a migração massiva de dados para o ecossistema Sil Sistemas Platform (SSP), garantindo a integridade dos dados através de uma camada de validação offline prévia ao envio.
 
-## Arquitetura
-
-Segue os princípios de Clean Architecture com padrão CQRS (Command Query Responsibility Segregation) para manutenibilidade, controle de erros e escalabilidade.
-
-### Estrutura do Projeto
-
-```
-template-electron/
-├── electron/                    # Main Process (Electron)
-│   ├── main.ts                 # Processo principal do Electron
-│   ├── preload.ts              # Script de preload para IPC
-│   └── ipc/                    # Handlers IPC
-│       ├── commands/           # Handlers de comandos CQRS
-│       └── queries/            # Handlers de queries CQRS
-│
-├── src/                        # Renderer Process (React)
-│   ├── domain/                 # Regras de Negócio Empresariais
-│   │   ├── entities/           # Entidades de domínio
-│   │   ├── value-objects/      # Objetos de valor
-│   │   └── interfaces/         # Interfaces de repositórios
-│   │
-│   ├── application/            # Regras de Negócio da Aplicação
-│   │   ├── commands/           # Operações de escrita (CQRS)
-│   │   ├── queries/            # Operações de leitura (CQRS)
-│   │   ├── dto/                # Data Transfer Objects
-│   │   └── events/             # Eventos de domínio
-│   │
-│   ├── infrastructure/         # Frameworks e Serviços Externos
-│   │   ├── persistence/        # Implementação de repositórios
-│   │   └── electron-api/       # Camada de comunicação IPC
-│   │
-│   ├── presentation/           # Camada de UI
-│   │   ├── components/         # Componentes React
-│   │   ├── pages/              # Páginas
-│   │   ├── hooks/              # Hooks customizados
-│   │   └── providers/          # Provedores de contexto
-│   │
-│   ├── shared/                 # Recursos compartilhados
-│   │   ├── errors/             # Tratamento de erros
-│   │   ├── types/              # Tipos TypeScript
-│   │   └── utils/              # Funções utilitárias
-│   │
-│   └── di/                     # Injeção de Dependência
-│       └── container.ts        # Container IoC
-```
-
-## Características
-
-- ✅ **Clean Architecture** - Separação clara de responsabilidades
-- ✅ **CQRS** - Comandos e queries separados
-- ✅ **Tratamento de Erros** - Sistema abrangente de erros
-- ✅ **Injeção de Dependência** - InversifyJS para IoC
-- ✅ **Type Safety** - TypeScript + Zod validation
-- ✅ **UI Moderna** - shadcn/ui + Tailwind CSS
-- ✅ **React Query** - Gerenciamento de estado e cache
-- ✅ **Electron IPC** - Comunicação type-safe
-- ✅ **Dev Container** - Ambiente de desenvolvimento remoto
-
-## Começando
+Principais funcionalidades:
+- Validação multi-etapa de arquivos CSV/JSON com detecção inteligente de delimitadores e tipos de dados.
+- Fluxo de trabalho desacoplado com arquitetura orientada a eventos para processos de importação não blocantes.
+- Orquestração inteligente de envios sequenciais ou paralelos para os ambientes produtivos e de sandbox da plataforma.
+- Interface intuitiva para seleção dinâmica de organizações, unidades operacionais e empresas.
+- Inspeção e monitoramento de tráfego API em tempo real com logs detalhados de request/response e análise de latência.
+- Suporte a modelos de dados complexos, incluindo veículos, fabricantes e relacionamentos de frota.
 
 ### Pré-requisitos
 
-- Node.js 18+
-- npm ou yarn
+Para executar ou desenvolver este projeto localmente, você precisará de:
+- .NET 8.0 SDK (necessário para os serviços de orquestração e backend da plataforma)
+- Node.js 20.x ou superior
+- Git e GitHub CLI
 
-### Instalação Local
+### Variáveis de Ambiente
 
+> [!IMPORTANT]
+> A configuração correta das variáveis de ambiente é essencial para que o wizard consiga se comunicar com as APIs da plataforma e executar os processos de validação corretamente.
+
+| Variável | Descrição | Obrigatório | Exemplo |
+|----------|-----------|-------------|---------|
+| `NODE_ENV` | Define se a aplicação deve rodar em modo de desenvolvimento ou produção | Não | `development` |
+| `API_ENVIRONMENT` | Define o ambiente padrão se não selecionado pelo usuário | Não | `staging` |
+
+Para configurar as variáveis locais:
 ```bash
-# Install dependencies
-npm instar dependências
-npm install
+cp .env.example .env
+# Editar .env com seus valores
 ```
 
-### Desenvolvimento Local
+### Autenticação
 
-```bash
-# Modo desenvolvimento
-npm run electron:dev
+O sistema de autenticação é baseado no fluxo de **One-Time Password (OTP)**. O acesso é restrito a usuários autorizados da Sil Sistemas:
+1. O usuário solicita o código de acesso informando o e-mail corporativo.
+2. Após a validação do código, a aplicação recebe um **JWT (JSON Web Token)** de longa duração.
+3. Este token é armazenado com segurança no estado da aplicação e incluído nos cabeçalhos de autorização (`Authorization: Bearer <token>`) de todas as chamadas subsequentes para os orquestradores da Sil Sistemas Platform.
 
-# Apenas Vite dev server
-npm run dev
+## Background Services
 
-# Build de produção
-npm run build
-```
-
-### Desenvolvimento Remoto
-
-Para desenvolvimento em container/remoto:
-
-```bash
-# 1. Instale Docker Desktop
-# 2. Instale extensão Remote - Containers no VS Code
-# 3. Pressione F1 → "Dev Containers: Reopen in Container"
-```
-
-Veja instruções completas em **[AMBIENTE_REMOTO.md](AMBIENTE_REMOTO.md)**
-
-## Camadas da Arquitetura
-
-### 1. Domain (Domínio)
-
-Regras de negócio empresariais independentes de frameworks
-
-- Entidades: User, Product
-- Value Objects: Email, Money
-- Interfaces de repositórios
-
-### 2. Application (Aplicação)
-
-Regras de negócio específicas da aplicação
-
-- **Commands**: CreateUser, UpdateUser
-- **Queries**: GetUser, ListUsers
-- **DTOs**: UserDTO, ProductDTO
-- **Events**: UserCreated, UserUpdated
-
-### 3. Infrastructure (Infraestrutura)
-
-Implementações de frameworks e serviços externos
-
-- Repositórios in-memory
-- Event Bus
-- IPC Electron
-
-### 4. Presentation (Apresentação)
-
-Componentes de interface
-
-- Componentes React com shadcn/ui
-- Hooks customizados para CQRS
-- Páginas e providers
-
-## Padrão CQRS
-
-### Comandos (Escrita)
-
-```typescript
-const command = new CreateUserCommand(email, name, role);
-await commandBus.execute(command);
-```
-
-### Queries (Leitura)
-
-```typescript
-const query = new GetUserQuery(userId);
-const result = await queryBus.execute(query);
-```
-
-## Stack Tecnológica
-
-- **Electron 28** - Framework desktop
-- **React 18** - Biblioteca UI
-- **TypeScript 5** - Type safety
-- **Vite 5** - Build tool
-- **Tailwind CSS** - Estilização
-- **shadcn/ui** - Componentes UI
-- **React Query** - Data fetching
-- **InversifyJS** - Injeção de dependência
-- **Zod** - Validação de schemas
-
-## Componentes UI Incluídos
-
-Button, Card, Input, Select, Dialog, Label, Skeleton, Alert, Toast
-
-## Benefícios
-
-1. **Manutenibilidade** - Separação clara de responsabilidades
-2. **Testabilidade** - Cada camada pode ser testada independentemente
-3. **Escalabilidade** - Organização por features
-4. **Type Safety** - TypeScript completo
-5. **Independência de Framework** - Lógica de negócio isolada
-
-## Scripts Disponíveis
-
-```bash
-npm run dev              # Vite dev server
-npm run electron:dev     # Electron + Vite com hot reload
-npm run build           # Build de produção
-npm run lint            # Executar ESLint
-npm run preview         # Preview do build
-```
-
-## Desenvolvimento com IA
-
-Este projeto inclui diretrizes para desenvolvimento assistido por IA. Consulte **[AI_GUIDELINES.md](AI_GUIDELINES.md)** para:
-
-- Padrões de código
-- Estrutura de arquivos
-- Convenções de nomenclatura
-- Melhores práticas CQRS
+- **Hangfire**: Gerenciamento de tarefas em segundo plano no ecossistema SSP, permitindo que as migrações mais pesadas sejam processadas de forma assíncrona sem bloquear o wizard.
+- **SignalR**: Utilizado para fornecer feedback visual em tempo real sobre o progresso das importações no desktop através de conexões via WebSocket.
+- **InMemoryEventBus**: Barramento de eventos interno utilizado para sincronizar componentes da interface e gerenciar eventos de domínio durante a validação de arquivos.
+- **Google PubSub**: Orquestração de mensagens distribuídas para garantir que a consistência dos dados migrados seja replicada entre diferentes microsserviços da plataforma.

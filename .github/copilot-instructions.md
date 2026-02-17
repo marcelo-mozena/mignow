@@ -1,0 +1,13 @@
+- Code review e comentários sempre em português brasileiro (pt-br)
+- Termos técnicos podem permanecer em inglês
+- NÃO inserir secrets, tokens ou credenciais diretamente no código
+- NÃO usar variáveis de ambiente para lógica de negócio crítica
+- Variáveis de ambiente apenas para configuração: URLs, connection strings, feature flags
+- Nomes descritivos para variáveis, métodos e classes
+- Funções pequenas com responsabilidade única
+- Evitar código duplicado (DRY)
+- Preferir composição sobre herança
+- Validar todas as entradas de dados (requests, parâmetros, inputs)
+- Usar exceções específicas, nunca genéricas
+- Não silenciar exceções sem tratamento adequado
+- Para code review sempre aplicar as instructions.md iniciadas com "sil-" uma vez que sao nossas instruções padrão corporativas
