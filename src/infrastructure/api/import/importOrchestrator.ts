@@ -24,11 +24,47 @@ function getService(dataType: string): IImportService {
  * Validate all records in a file using the registered service.
  */
 export async function validateImport(dataType: string, file: File): Promise<ValidationError[]> {
-  const service = getService(dataType);
-  const records = await parseFile(file);
+  let service: IImportService;
+  try {
+    service = getService(dataType);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Tipo de importação desconhecido.';
+    return [{ field: 'Configuração', error: msg }];
+  }
+
+  let records: Record<string, unknown>[];
+  try {
+    records = await parseFile(file);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Não foi possível ler o arquivo.';
+    return [
+      {
+        field: 'Arquivo',
+        error: `Erro ao processar o arquivo: ${msg}. Verifique se o formato é CSV (separador , ou ;) e se o cabeçalho está correto.`,
+      },
+    ];
+  }
 
   if (records.length === 0) {
-    return [{ field: 'Arquivo', error: 'O arquivo não contém registros.' }];
+    return [
+      {
+        field: 'Arquivo',
+        error:
+          'O arquivo não contém registros. Verifique se há dados abaixo da linha de cabeçalho.',
+      },
+    ];
+  }
+
+  // Validate header: check if the first record has the expected keys
+  const firstRecord = records[0];
+  const keys = Object.keys(firstRecord);
+  if (keys.length === 1 && keys[0].includes(';')) {
+    return [
+      {
+        field: 'Arquivo',
+        error: `O separador do CSV não foi detectado corretamente. Use vírgula (,) ou ponto e vírgula (;) como separador de colunas. Colunas encontradas: "${keys[0]}"`,
+      },
+    ];
   }
 
   const allErrors: ValidationError[] = [];
@@ -50,7 +86,24 @@ export async function executeImport(
   ctx: ImportContext
 ): Promise<ImportSummary> {
   const service = getService(dataType);
-  const records = await parseFile(file);
+
+  let records: Record<string, unknown>[];
+  try {
+    records = await parseFile(file);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Não foi possível ler o arquivo.';
+    return {
+      total: 0,
+      imported: 0,
+      failed: 1,
+      errors: [
+        {
+          field: 'Arquivo',
+          error: `Erro ao processar o arquivo: ${msg}. Verifique se o formato é CSV (separador , ou ;) e se o cabeçalho está correto.`,
+        },
+      ],
+    };
+  }
 
   const summary: ImportSummary = {
     total: records.length,
@@ -63,12 +116,12 @@ export async function executeImport(
     try {
       await service.importRecord(ctx, records[i]);
       summary.imported++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       summary.failed++;
       summary.errors.push({
         row: i + 1,
         field: 'API',
-        error: err.message || 'Erro desconhecido ao importar registro.',
+        error: err instanceof Error ? err.message : 'Erro desconhecido ao importar registro.',
       });
     }
   }

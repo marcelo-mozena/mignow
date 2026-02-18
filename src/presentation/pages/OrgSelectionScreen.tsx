@@ -23,7 +23,7 @@ import { useOrgStore } from '@/presentation/stores/useOrgStore';
 
 export function OrgSelectionScreen() {
   const { setScreen } = useAuthStore();
-  const { orgs, userName, setSelectedOrg, setSelectedCompany } = useOrgStore();
+  const { orgs, userName, companyNames, setSelectedOrg, setSelectedCompany } = useOrgStore();
 
   const [orgId, setOrgId] = useState('');
   const [companyId, setCompanyId] = useState('');
@@ -71,9 +71,9 @@ export function OrgSelectionScreen() {
                 <SelectValue placeholder="Selecione a organização..." />
               </SelectTrigger>
               <SelectContent>
-                {orgs.map((org, idx) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    Organização {idx + 1} — {org.id.substring(0, 8)}...
+                {orgs.map(org => (
+                  <SelectItem key={org.id} value={org.id} className="text-sm">
+                    {org.nome ?? org.id}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -89,9 +89,9 @@ export function OrgSelectionScreen() {
                   <SelectValue placeholder="Selecione a empresa..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {companies.map((c, idx) => (
-                    <SelectItem key={c} value={c}>
-                      Empresa {idx + 1} — {c.substring(0, 8)}...
+                  {companies.map(c => (
+                    <SelectItem key={c} value={c} className="text-sm">
+                      {companyNames[c] ?? c}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -2,10 +2,12 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 import { createStore } from './createStore';
+import type { Environment } from '@/shared/constants/environments';
 
-// --- Types ---
+// Re-export for backwards compatibility
+export type { Environment };
+export { getBaseUrl } from '@/shared/constants/environments';
 
-export type Environment = 'test' | 'staging' | 'sandbox' | 'prod';
 export type SetupMode = 'organization' | 'environment';
 
 export interface AuthState {
@@ -14,19 +16,6 @@ export interface AuthState {
   setupMode: SetupMode | '';
   authToken: string;
   screen: 'login' | 'otp' | 'select-org' | 'main';
-}
-
-// --- URL Construction ---
-
-const BASE_URLS: Record<Environment, string> = {
-  test: 'https://api.platform.test.silsistemas.com.br',
-  staging: 'https://api.platform.staging.silsistemas.com.br',
-  sandbox: 'https://api.platform.sandbox.silsistemas.com.br',
-  prod: 'https://api.platform.silsistemas.com.br',
-};
-
-export function getBaseUrl(env: Environment): string {
-  return BASE_URLS[env];
 }
 
 // --- Store ---
@@ -45,7 +34,10 @@ export function useAuthStore() {
   const current = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 
   const setUserEmail = useCallback((email: string) => store.setState({ userEmail: email }), []);
-  const setEnvironment = useCallback((env: Environment) => store.setState({ environment: env }), []);
+  const setEnvironment = useCallback(
+    (env: Environment) => store.setState({ environment: env }),
+    []
+  );
   const setSetupMode = useCallback((mode: SetupMode) => store.setState({ setupMode: mode }), []);
   const setAuthToken = useCallback((token: string) => store.setState({ authToken: token }), []);
   const setScreen = useCallback((screen: AuthState['screen']) => store.setState({ screen }), []);

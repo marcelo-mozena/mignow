@@ -1,16 +1,16 @@
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: {
-    code: string;
-    message: string;
-    details?: any;
+    error_code: string;
+    error_message: string;
+    display_message: string;
   };
   timestamp: string;
 }
 
-export type CommandResult<T = any> = Promise<T>;
-export type QueryResult<T = any> = Promise<T>;
+export type CommandResult<T = unknown> = Promise<T>;
+export type QueryResult<T = unknown> = Promise<T>;
 
 /**
  * Validation error produced by import services.

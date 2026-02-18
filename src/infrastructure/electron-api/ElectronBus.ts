@@ -29,7 +29,7 @@ export class ElectronBus implements MessageBus {
 
     try {
       const result = await window.electron.ipcRenderer.invoke(channel, message);
-      return result;
+      return result as T;
     } catch (error) {
       console.error(`Error executing ${this.prefix} ${messageName}:`, error);
       throw error;

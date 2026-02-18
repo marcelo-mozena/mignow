@@ -17,7 +17,8 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/presentation/components/ui/radio-group';
 import { Spinner } from '@/presentation/components/ui/spinner';
 import { SilLogo } from '@/presentation/components/ui/sil-logo';
-import { useAuthStore, type Environment, type SetupMode } from '@/presentation/stores/useAuthStore';
+import { useAuthStore, type SetupMode } from '@/presentation/stores/useAuthStore';
+import type { Environment } from '@/shared/constants/environments';
 import { sendOtp, ApiError } from '@/infrastructure/api/authApi';
 import { Email } from '@/domain/value-objects/Email';
 

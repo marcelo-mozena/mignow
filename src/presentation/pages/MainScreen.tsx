@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { Building2, Download, LogOut, Mail, Server, Settings } from 'lucide-react';
+import { toast } from 'sonner';
+import { Download, LogOut, Mail, Server, Settings } from 'lucide-react';
 import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Separator } from '@/presentation/components/ui/separator';
@@ -27,6 +28,7 @@ const DADOS_MESTRE_OPTIONS: ImportOption[] = [
   { value: 'veiculos', label: 'Veículos' },
   { value: 'veiculos-fabricantes', label: 'Veículos Fabricantes' },
   { value: 'veiculos-modelos', label: 'Veículos Modelos' },
+  { value: 'usuarios', label: 'Usuários' },
 ];
 
 const TORRE_CONTROLE_OPTIONS: ImportOption[] = [
@@ -72,6 +74,7 @@ export function MainScreen() {
     orgs,
     selectedOrgId,
     selectedCompanyId,
+    companyNames,
     selectedOrg,
     setSelectedOrg,
     setSelectedCompany,
@@ -85,6 +88,7 @@ export function MainScreen() {
       await downloadTemplatesZip();
     } catch (err) {
       console.error('Erro ao baixar templates:', err);
+      toast.error('Não foi possível baixar os templates. Tente novamente.');
     } finally {
       setDownloading(false);
     }
@@ -135,18 +139,16 @@ export function MainScreen() {
         {/* Org / Company selectors */}
         <div className="border-t">
           <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground">Organização:</span>
               <Select value={selectedOrgId} onValueChange={handleOrgChange}>
-                <SelectTrigger className="h-8 w-[260px] text-xs">
+                <SelectTrigger className="h-8 w-[340px] text-xs">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {orgs.map((org, idx) => (
+                  {orgs.map(org => (
                     <SelectItem key={org.id} value={org.id} className="text-xs">
-                      Org {idx + 1} — {org.id.substring(0, 8)}...
+                      {org.nome ?? org.id}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -157,13 +159,13 @@ export function MainScreen() {
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-muted-foreground">Empresa:</span>
                 <Select value={selectedCompanyId} onValueChange={handleCompanyChange}>
-                  <SelectTrigger className="h-8 w-[260px] text-xs">
+                  <SelectTrigger className="h-8 w-[340px] text-xs">
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {companies.map((c, idx) => (
+                    {companies.map(c => (
                       <SelectItem key={c} value={c} className="text-xs">
-                        Empresa {idx + 1} — {c.substring(0, 8)}...
+                        {companyNames[c] ?? c}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -94,7 +94,9 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
     setFile(selected);
     setErrors([]);
     setSummary(null);
-    setStep('validate');
+    setStep(selected ? 'validate' : 'attach');
+    // Reset input value so re-selecting the same file triggers onChange again
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
   const handleValidate = useCallback(async () => {
@@ -106,8 +108,10 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
       const result = onValidate ? await onValidate(selectedData, file) : [];
       setErrors(result);
       setStep(result.length > 0 ? 'validate' : 'validated');
-    } catch {
-      setErrors([{ field: 'Geral', error: 'Erro inesperado ao validar o arquivo.' }]);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error && err.message ? err.message : 'Erro inesperado ao validar o arquivo.';
+      setErrors([{ field: 'Geral', error: message }]);
       setStep('validate');
     }
   }, [file, selectedData, onValidate]);
@@ -125,8 +129,12 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
         }
       }
       setStep('imported');
-    } catch {
-      setErrors([{ field: 'Geral', error: 'Erro inesperado ao importar o arquivo.' }]);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'Erro inesperado ao importar o arquivo.';
+      setErrors([{ field: 'Geral', error: message }]);
       setStep('validate');
     }
   }, [file, selectedData, onImport]);
@@ -212,7 +220,7 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,.xlsx,.xls,.json"
+                accept=".csv,.json"
                 className="hidden"
                 onChange={handleFileChange}
               />
@@ -327,7 +335,7 @@ export function ImportTab({ options, onValidate, onImport }: ImportTabProps) {
             <div className="relative w-64">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar erros..."
+                placeholder="Pesquisar erros..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="h-8 pl-8 text-xs"

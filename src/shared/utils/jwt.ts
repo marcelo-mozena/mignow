@@ -3,6 +3,7 @@
 export interface JwtOrg {
   id: string;
   companies: string[];
+  nome?: string;
 }
 
 export interface JwtPayload {

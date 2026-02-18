@@ -78,15 +78,11 @@ export async function parseCsvFile(
       if (lower === 'true' || lower === 'false') {
         record[header] = lower === 'true';
       }
-      // Numeric
-      else if (val !== '' && !isNaN(Number(val))) {
-        record[header] = Number(val);
-      }
       // Date DD/MM/YY or DD/MM/YYYY
       else if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(val)) {
         record[header] = normalizeDateValue(val);
       }
-      // String
+      // Keep as string — avoids data loss for CPF, phone, codes with leading zeros
       else {
         record[header] = val;
       }

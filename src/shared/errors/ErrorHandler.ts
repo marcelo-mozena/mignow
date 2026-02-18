@@ -4,7 +4,7 @@ export interface ErrorResponse {
   code: string;
   message: string;
   statusCode: number;
-  details?: any;
+  details?: unknown;
   timestamp: string;
 }
 

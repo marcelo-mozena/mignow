@@ -17,9 +17,20 @@ import {
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/presentation/components/ui/input-otp';
 import { Spinner } from '@/presentation/components/ui/spinner';
 import { SilLogo } from '@/presentation/components/ui/sil-logo';
-import { useAuthStore, type Environment } from '@/presentation/stores/useAuthStore';
-import { setOrgsFromJwt, setEnvSaved } from '@/presentation/stores/useOrgStore';
-import { validateToken, ApiError } from '@/infrastructure/api/authApi';
+import { useAuthStore } from '@/presentation/stores/useAuthStore';
+import type { Environment } from '@/shared/constants/environments';
+import {
+  setOrgsFromJwt,
+  setEnvSaved,
+  updateOrgNames,
+  updateCompanyNames,
+} from '@/presentation/stores/useOrgStore';
+import {
+  validateToken,
+  fetchOrganizacoes,
+  fetchEmpresas,
+  ApiError,
+} from '@/infrastructure/api/authApi';
 import { decodeJwt } from '@/shared/utils/jwt';
 
 export function OtpScreen() {
@@ -47,15 +58,50 @@ export function OtpScreen() {
       const jwt = decodeJwt(response.access_token);
       setOrgsFromJwt(jwt.name, jwt.orgs);
 
+      // Fetch org names from API to enrich display
+      if (jwt.orgs.length > 0) {
+        try {
+          const orgDtos = await fetchOrganizacoes(
+            environment as Environment,
+            response.access_token,
+            jwt.orgs[0].id
+          );
+          const nameMap: Record<string, string> = {};
+          for (const dto of orgDtos) {
+            nameMap[dto.identificacao_api] = dto.nome;
+          }
+          updateOrgNames(nameMap);
+          // Fetch company names in parallel
+          try {
+            const empresaDtos = await fetchEmpresas(
+              environment as Environment,
+              response.access_token,
+              jwt.orgs[0].id
+            );
+            const companyMap: Record<string, string> = {};
+            for (const dto of empresaDtos) {
+              companyMap[dto.identificacao_api] = dto.nome;
+            }
+            updateCompanyNames(companyMap);
+          } catch (empErr) {
+            console.warn('[Empresa] Could not fetch company names:', empErr);
+            toast.warning('Não foi possível carregar os nomes das empresas.');
+          }
+        } catch (orgErr) {
+          console.warn('[Org] Could not fetch organization names:', orgErr);
+          toast.warning('Não foi possível carregar os nomes das organizações.');
+        }
+      }
+
       // Save orgs to .env file via Electron IPC
       try {
         if (window.electron) {
-          const result = await window.electron.ipcRenderer.invoke('env:saveOrgs', {
+          const result = (await window.electron.ipcRenderer.invoke('env:saveOrgs', {
             orgs: jwt.orgs,
             userName: jwt.name,
             userEmail: jwt.sub,
             environment,
-          });
+          })) as { path: string };
           setEnvSaved(result.path);
           console.log('[JWT] Orgs saved to:', result.path);
         }

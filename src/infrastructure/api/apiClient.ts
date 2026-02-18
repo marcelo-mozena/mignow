@@ -55,21 +55,42 @@ function getFallbackMessage(status: number): string {
 
 function getErrorInfo(status: number, body: unknown): { message: string; errorCode?: string } {
   const info = extractBodyInfo(body);
-  return {
-    message: info.message ?? getFallbackMessage(status),
-    errorCode: info.errorCode ?? undefined,
-  };
+  const message = info.message ?? getFallbackMessage(status);
+  const errorCode = info.errorCode ?? undefined;
+  // Include error code in message so callers (e.g. import orchestrator) surface it to users
+  const fullMessage = errorCode ? `[${errorCode}] ${message}` : message;
+  return { message: fullMessage, errorCode };
+}
+
+// --- Helpers ---
+
+function redactHeaders(headers: unknown): Record<string, string> {
+  if (!headers || typeof headers !== 'object') return {};
+  const h = headers as Record<string, string>;
+  const redacted: Record<string, string> = {};
+  for (const [key, value] of Object.entries(h)) {
+    redacted[key] = key.toLowerCase() === 'authorization' ? '[REDACTED]' : value;
+  }
+  return redacted;
+}
+
+function safeParseJson(body: unknown): unknown {
+  if (!body || typeof body !== 'string') return undefined;
+  try {
+    return JSON.parse(body);
+  } catch {
+    return body;
+  }
 }
 
 // --- Generic request ---
 
 export async function apiRequest<T>(url: string, options: RequestInit): Promise<T> {
   const method = options.method ?? 'GET';
-  const requestBody =
-    options.body && typeof options.body === 'string' ? JSON.parse(options.body) : undefined;
+  const requestBody = safeParseJson(options.body);
 
   console.group(`[API Request] ${method} ${url}`);
-  console.log('Headers:', options.headers);
+  console.log('Headers:', redactHeaders(options.headers));
   if (requestBody) console.log('Body:', requestBody);
   console.groupEnd();
 
@@ -108,8 +129,7 @@ export async function apiRequest<T>(url: string, options: RequestInit): Promise<
     }
     const errorInfo = getErrorInfo(response.status, body);
     console.error(
-      `[API Response] ${method} ${url} — Status: ${response.status} — Code: ${errorInfo.errorCode ?? 'N/A'}`,
-      body
+      `[API Response] ${method} ${url} — Status: ${response.status} — Code: ${errorInfo.errorCode ?? 'N/A'}\nBody: ${JSON.stringify(body, null, 2)}`
     );
     logRequest({
       method,

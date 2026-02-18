@@ -7,13 +7,21 @@
 1. [Architecture Overview](#architecture-overview)
 2. [Layer Responsibilities](#layer-responsibilities)
 3. [CQRS Pattern](#cqrs-pattern)
-4. [Adding New Features](#adding-new-features)
-5. [Error Handling](#error-handling)
-6. [Naming Conventions](#naming-conventions)
-7. [File Organization](#file-organization)
-8. [Common Patterns](#common-patterns)
-9. [Testing Strategy](#testing-strategy)
-10. [Best Practices](#best-practices)
+4. [DRY — Don't Repeat Yourself](#dry--dont-repeat-yourself)
+5. [Adding New Features](#adding-new-features)
+6. [Error Handling](#error-handling)
+7. [State Management](#state-management)
+8. [Electron + Next.js Boundary](#electron--nextjs-boundary)
+9. [Naming Conventions](#naming-conventions)
+10. [File Organization](#file-organization)
+11. [Common Patterns](#common-patterns)
+12. [Logging & Observability](#logging--observability)
+13. [Security](#security)
+14. [Internationalization (i18n)](#internationalization-i18n)
+15. [Testing Strategy](#testing-strategy)
+16. [Dependencies & Tooling](#dependencies--tooling)
+17. [Best Practices](#best-practices)
+18. [Known Technical Debt](#known-technical-debt)
 
 ---
 
@@ -35,6 +43,8 @@ Presentation Layer → Infrastructure Layer → Application Layer → Domain Lay
 3. **Framework Independence**: Business logic doesn't depend on frameworks
 4. **Testability**: Each layer can be tested in isolation
 5. **CQRS**: Separate read and write operations
+6. **DRY (Don't Repeat Yourself)**: Eliminate duplication of logic, data, and patterns
+7. **Strict Layer Boundaries**: Inner layers MUST NOT depend on outer layers (e.g., `infrastructure/` must never import from `presentation/`)
 
 ---
 
@@ -306,6 +316,102 @@ export class GetUserHandler {
 
 ---
 
+## DRY — Don't Repeat Yourself
+
+**DRY** is a core principle in this codebase. Every piece of knowledge or logic should have a **single, authoritative representation**. Duplication leads to inconsistency, increased maintenance cost, and bugs.
+
+### Rules
+
+1. **No duplicated business logic**: If a validation, calculation, or transformation exists, extract it to the appropriate layer and reuse it
+2. **No duplicated types/interfaces**: Define types once in the appropriate layer. Use re-exports from barrel files when needed across layers
+3. **No copy-paste handlers**: When CQRS handlers share common patterns (e.g., validation → execute → persist → emit event), extract a base handler or helper function
+4. **No duplicated utility functions**: All shared utilities go in `src/shared/utils/`. Check before creating a new util that an equivalent doesn't already exist
+5. **No duplicated error handling**: Use a unified error hierarchy. Don't create separate error classes per layer that represent the same concept
+6. **Prefer abstractions over repetition**: If the same boilerplate appears 3+ times, extract a generic helper, factory, or higher-order function
+
+### DI Container Registration — Avoid Repetitive Patterns
+
+```typescript
+// ❌ Bad — Repetitive manual resolution
+container.bind<CreateUserHandler>('CreateUserHandler').toDynamicValue((ctx) => {
+  const repo = ctx.container.get<IUserRepository>('UserRepository');
+  const bus = ctx.container.get<IEventBus>('EventBus');
+  return new CreateUserHandler(repo, bus);
+});
+container.bind<UpdateUserHandler>('UpdateUserHandler').toDynamicValue((ctx) => {
+  const repo = ctx.container.get<IUserRepository>('UserRepository');
+  const bus = ctx.container.get<IEventBus>('EventBus');
+  return new UpdateUserHandler(repo, bus);
+});
+
+// ✅ Good — Extract a factory helper
+function bindCommandHandler<T>(
+  container: Container,
+  token: string,
+  Handler: new (repo: IUserRepository, bus: IEventBus) => T,
+) {
+  container.bind<T>(token).toDynamicValue((ctx) => {
+    const repo = ctx.container.get<IUserRepository>('UserRepository');
+    const bus = ctx.container.get<IEventBus>('EventBus');
+    return new Handler(repo, bus);
+  });
+}
+
+bindCommandHandler(container, 'CreateUserHandler', CreateUserHandler);
+bindCommandHandler(container, 'UpdateUserHandler', UpdateUserHandler);
+```
+
+### React Hooks — Extract Shared Mutation Logic
+
+```typescript
+// ❌ Bad — Duplicated mutation pattern in every hook
+export const useCreateUser = () => {
+  const commandBus = useCommandBus();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => commandBus.execute(new CreateUserCommand(input)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+};
+
+export const useUpdateUser = () => {
+  const commandBus = useCommandBus();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => commandBus.execute(new UpdateUserCommand(input)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+};
+
+// ✅ Good — Extract a command mutation factory
+function useCommandMutation<TInput, TCommand>(
+  CommandClass: new (input: TInput) => TCommand,
+  invalidateKey: string[],
+) {
+  const commandBus = useCommandBus();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TInput) => commandBus.execute(new CommandClass(input)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: invalidateKey }),
+  });
+}
+
+export const useCreateUser = () => useCommandMutation(CreateUserCommand, ['users']);
+export const useUpdateUser = () => useCommandMutation(UpdateUserCommand, ['users']);
+```
+
+### Common DRY Violations to Avoid
+
+| Violation | Solution |
+|-----------|----------|
+| Multiple files defining the same TypeScript type | Define once in `shared/types/`, re-export via barrel |
+| Same API error parsing in multiple services | Centralize in `apiClient.ts` error interceptor |
+| Repeated Zod schemas with overlapping fields | Use `z.object().extend()` or `z.intersection()` |
+| Duplicated toast/notification patterns | Extract `showSuccessToast()`, `showErrorToast()` helpers |
+| Same date/string formatting across components | Use `shared/utils/date.ts` and `shared/utils/string.ts` |
+
+---
+
 ## Adding New Features
 
 ### Step-by-Step Process
@@ -534,6 +640,156 @@ const handleSubmit = async () => {
 
 ---
 
+## State Management
+
+This project uses a **custom lightweight store system** based on React's `useSyncExternalStore`. Understanding when to use each state mechanism is critical.
+
+### Store Architecture
+
+The store factory is in `src/presentation/stores/createStore.ts`:
+
+```typescript
+// Creates a store with subscribe, getSnapshot, setState, reset
+const store = createStore<AuthState>(initialState);
+```
+
+### When to Use Each State Mechanism
+
+| Mechanism | Use Case | Example |
+|-----------|----------|---------|
+| **Custom Store** (`createStore`) | Global app state that needs to be accessed outside React components (auth, org, request logs) | `useAuthStore`, `useOrgStore` |
+| **React Query** (`@tanstack/react-query`) | Server state — cached API data with automatic refetch, invalidation | Fetching lists, entity details from API |
+| **React `useState`/`useReducer`** | Component-local UI state (form inputs, toggles, modals) | Form dialogs, dropdown open/close |
+| **React Context** | Dependency injection for providers (CQRS buses, theme) | `CQRSProvider` |
+
+### Rules
+
+1. **Do NOT use custom stores for server-cached data** — use React Query for API data
+2. **Do NOT put API calls directly in store actions** — stores hold state, services call APIs
+3. **Export standalone setter functions** for stores that need to be updated from non-React code (e.g., `setOrgsFromJwt()`)
+4. **Never import store from infrastructure layer** — pass values via function parameters or shared config
+
+---
+
+## Electron + Next.js Boundary
+
+This is a hybrid Electron + Next.js application. **Respecting the boundary between Electron (main process) and the renderer (Next.js) is critical.**
+
+### Architecture
+
+```
+┌─────────────────────────────────────────┐
+│ Electron Main Process (electron/)       │
+│   ├── main.ts (window management)       │
+│   ├── preload.ts (context bridge)       │
+│   └── ipc/ (command/query handlers)     │
+├─────────────────────────────────────────┤
+│         IPC Bridge (contextBridge)      │
+├─────────────────────────────────────────┤
+│ Renderer Process (src/)                 │
+│   ├── app/ (Next.js routing)            │
+│   ├── presentation/ (UI & hooks)        │
+│   ├── infrastructure/ (API, adapters)   │
+│   ├── application/ (CQRS handlers)      │
+│   └── domain/ (entities, interfaces)    │
+└─────────────────────────────────────────┘
+```
+
+### Rules
+
+1. **Electron main process code** lives exclusively in `electron/`
+2. **Renderer cannot directly access** Node.js APIs — use `preload.ts` + `contextBridge`
+3. **IPC handlers** in `electron/ipc/` follow the same command/query pattern as the application layer
+4. **Types shared between main and renderer** go in `src/infrastructure/electron-api/types.d.ts`
+5. **Never import Electron modules** in `src/` — use the bridge abstraction in `infrastructure/electron-api/`
+
+---
+
+## Logging & Observability
+
+### Rules
+
+1. **Never log sensitive data** — Bearer tokens, passwords, full request headers with auth, PII
+2. **Use conditional logging** — wrap verbose logs in environment checks:
+
+```typescript
+// ✅ Good
+if (process.env.NODE_ENV === 'development') {
+  console.group(`[API] ${method} ${url}`);
+  console.log('Status:', response.status);
+  console.groupEnd();
+}
+
+// ❌ Bad — logs tokens in production
+console.log('Headers:', headers); // includes Authorization: Bearer xxx
+```
+
+3. **Structured log format** — prefer objects over string concatenation:
+
+```typescript
+// ✅ Good
+console.info({ event: 'import_complete', entity: 'veiculos', count: 150 });
+
+// ❌ Bad
+console.log('Import of veiculos done, 150 records');
+```
+
+4. **Request logging** uses the pluggable `setRequestLogger()` pattern in `apiClient.ts` to avoid cross-layer dependencies. New logging mechanisms should use this same pattern.
+
+---
+
+## Security
+
+### Rules
+
+1. **Never hardcode** secrets, tokens, API keys, or credentials in source code
+2. **Environment variables** for configuration only (URLs, feature flags) — never for business logic
+3. **Validate all inputs** — use Zod schemas at API boundaries and command handlers
+4. **Sanitize error responses** — never expose stack traces, SQL queries, or internal method names to the client
+5. **Token storage** — tokens are stored in memory (stores), never in `localStorage` or cookies without proper security flags
+6. **Header validation** — all tenant/org headers (`Sil-Organization`, `Sil-Company`) must be validated server-side
+
+### API Client Security
+
+```typescript
+// ❌ Bad — logging full auth headers
+console.log('Request headers:', headers);
+
+// ✅ Good — redact sensitive values
+const safeHeaders = { ...headers, Authorization: headers.Authorization ? '[REDACTED]' : undefined };
+console.log('Request headers:', safeHeaders);
+```
+
+---
+
+## Internationalization (i18n)
+
+### Rules
+
+1. **User-facing messages** (UI text, toast notifications, error display messages) MUST be in **Portuguese (pt-BR)**
+2. **Technical messages** (log entries, `error_message` in API responses, code comments for complex logic) are in **English**
+3. **Variable names, function names, class names** MUST be in **English**
+4. **Date/time formatting** MUST use `pt-BR` locale:
+
+```typescript
+// ✅ Good
+new Date().toLocaleDateString('pt-BR');
+new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(date);
+
+// ❌ Bad — English locale for user-facing dates
+new Date().toLocaleDateString('en-US');
+```
+
+5. **Currency formatting** uses BRL:
+
+```typescript
+new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+```
+
+6. **Do NOT mix languages** in the same context. If an error class returns messages to the UI, all its messages must be pt-BR. If it returns messages for developers, all must be English.
+
+---
+
 ## Naming Conventions
 
 ### Files and Folders
@@ -708,6 +964,35 @@ const { data: users } = useUsers({ page: 1, limit: 10 });
 
 ## Testing Strategy
 
+> ⚠️ **Current state**: Test infrastructure is not yet set up. When implementing, use **Vitest** as test runner and **React Testing Library** for components.
+
+### Recommended Setup
+
+```
+devDependencies:
+  vitest
+  @testing-library/react
+  @testing-library/jest-dom
+  @testing-library/user-event
+  msw (for API mocking)
+```
+
+### Test File Placement
+
+Co-locate tests with source files:
+
+```
+src/domain/entities/
+  User.ts
+  User.test.ts         # Unit test for entity
+src/application/commands/CreateUser/
+  CreateUserHandler.ts
+  CreateUserHandler.test.ts  # Unit test for handler
+src/presentation/hooks/
+  useCreateUser.ts
+  useCreateUser.test.ts      # Hook test
+```
+
 ### Unit Tests
 
 Test each layer independently:
@@ -763,6 +1048,69 @@ describe("User Management Integration", () => {
 });
 ```
 
+### Test Naming Convention
+
+Use descriptive names following the pattern: `should [expected behavior] when [condition]`
+
+```typescript
+// ✅ Good
+it("should return failure when email is invalid")
+it("should emit UserCreatedEvent after successful creation")
+it("should invalidate users query cache on mutation success")
+
+// ❌ Bad
+it("test1")
+it("works")
+it("creates user")
+```
+
+### What to Test (Priority Order)
+
+1. **Domain entities**: Business rules, validation logic, factory methods
+2. **Command/Query handlers**: Input validation, orchestration, error paths
+3. **Custom hooks**: State transitions, side effects
+4. **Utility functions**: Edge cases, formatting, parsing
+5. **UI components**: User interactions, conditional rendering
+
+---
+
+## Dependencies & Tooling
+
+### Core Dependencies
+
+| Package | Purpose | Layer |
+|---------|---------|-------|
+| `next` | App framework / routing | Presentation |
+| `react` / `react-dom` | UI rendering | Presentation |
+| `@tanstack/react-query` | Server state / cache management | Presentation |
+| `inversify` + `reflect-metadata` | Dependency Injection container | Infrastructure/DI |
+| `zod` | Schema validation | Application |
+| `sonner` | Toast notifications | Presentation |
+| `tailwindcss` | Utility-first CSS | Presentation |
+| `jszip` + `file-saver` | Template download/export | Infrastructure |
+| `jose` | JWT decoding | Shared utils |
+
+### Rules for Adding Dependencies
+
+1. **Check if the need is already covered** by an existing dependency before adding a new one (DRY)
+2. **Prefer small, focused libraries** over large frameworks
+3. **Document the purpose** of new dependencies in this table
+4. **Never add dependencies that duplicate** functionality already in the project (e.g., don't add `axios` when `apiClient.ts` wraps `fetch`)
+5. **Use Symbol-based DI tokens** instead of string literals when registering in inversify:
+
+```typescript
+// ✅ Good
+export const TOKENS = {
+  UserRepository: Symbol.for('UserRepository'),
+  EventBus: Symbol.for('EventBus'),
+} as const;
+
+container.bind<IUserRepository>(TOKENS.UserRepository).to(UserRepository);
+
+// ❌ Bad — fragile string tokens
+container.bind<IUserRepository>('UserRepository').to(UserRepository);
+```
+
 ---
 
 ## Best Practices
@@ -779,6 +1127,8 @@ describe("User Management Integration", () => {
 8. **Write descriptive error messages**
 9. **Use TypeScript strictly** (no `any` types)
 10. **Keep handlers focused** (single responsibility)
+11. **Apply DRY** — extract repeated patterns into helpers, factories, and shared utilities
+12. **Respect layer boundaries** — never import from outer layers into inner layers
 
 ### ❌ Don'ts
 
@@ -790,8 +1140,12 @@ describe("User Management Integration", () => {
 6. **Don't skip validation** in command handlers
 7. **Don't create circular dependencies**
 8. **Don't mix concerns** (e.g., UI logic in handlers)
-9. **Don't use `any` type** unless absolutely necessary
+9. **Don't use `any` type** — use `unknown` + type narrowing instead
 10. **Don't modify entities** directly from outside
+11. **Don't import from presentation/ in infrastructure/** — this violates Clean Architecture
+12. **Don't duplicate logic** — always check if a util/helper/pattern already exists
+13. **Don't log sensitive data** (tokens, passwords, PII) in any environment
+14. **Don't copy-paste code** — if you're copying a block, extract it into a shared function
 
 ---
 
@@ -1167,7 +1521,30 @@ When working with this codebase, always:
 2. Use CQRS pattern for all operations
 3. Implement Result pattern for error handling
 4. Keep layers separated and focused
-5. Write tests for each layer
-6. Document significant changes
+5. Apply DRY — eliminate every duplication you encounter
+6. Write tests for each layer
+7. Document significant changes
 
 For questions or clarifications, refer to the specific layer documentation or example implementations in the codebase.
+
+---
+
+## Known Technical Debt
+
+> This section tracks known issues that deviate from the guidelines. When working on code in these areas, prioritize resolving the debt incrementally.
+
+| Priority | Issue | Location | Resolution |
+|----------|-------|----------|------------|
+| 🔴 High | **Layer violation**: `authApi.ts` imports `Environment`/`getBaseUrl` from `presentation/stores/` | `src/infrastructure/api/authApi.ts` | Move `Environment` type and `getBaseUrl()` to `src/shared/` |
+| 🔴 High | **Sensitive data logging**: `apiClient.ts` logs full request headers including Bearer tokens via `console.group` without environment check | `src/infrastructure/api/apiClient.ts` | Wrap in `NODE_ENV === 'development'` guard and redact auth headers |
+| 🔴 High | **No test infrastructure**: Zero test files, no test runner configured | Project-wide | Set up Vitest + React Testing Library, start with domain entity tests |
+| 🟡 Medium | **Dual error hierarchies**: `ApiError` (in apiClient) and `AppError` (in shared/errors) are disconnected with different property names | `src/infrastructure/api/apiClient.ts`, `src/shared/errors/AppError.ts` | Unify: `ApiError` should extend `AppError` or map to it at the boundary |
+| 🟡 Medium | **Unused DI container**: inversify container registers CQRS handlers that are not used by the actual app (which uses direct API calls) | `src/di/container.ts` | Either remove unused registrations or integrate them into the actual flow |
+| 🟡 Medium | **String-based DI tokens**: Container uses string literals instead of Symbols | `src/di/container.ts` | Migrate to `Symbol.for()` tokens |
+| 🟡 Medium | **Zod not used**: `zod` is a dependency but no validation schemas exist in handlers | `src/application/` | Add Zod schemas to all command handlers |
+| 🟡 Medium | **Mixed language in errors**: `ErrorBoundary` has English text, `apiClient` has Portuguese | `src/shared/errors/ErrorBoundary.tsx`, `src/infrastructure/api/apiClient.ts` | Standardize: pt-BR for user-facing, English for technical |
+| 🟢 Low | **Dead re-export**: `src/shared/errors/Result.ts` re-exports from domain but is never imported | `src/shared/errors/Result.ts` | Remove or migrate all consumers to use it consistently |
+| 🟢 Low | **ES5 target**: `tsconfig.json` targets ES5 despite Electron/Chromium runtime supporting ES2020+ | `tsconfig.json` | Update `target` to `es2020` or `es2022` |
+| 🟢 Low | **Sequential import**: `importOrchestrator.ts` sends records one-by-one in a loop | `src/infrastructure/api/import/importOrchestrator.ts` | Implement batch processing with configurable concurrency |
+| 🟢 Low | **`any` usage**: `AppError.details`, `ErrorResponse.details`, catch blocks use `any` | Multiple files | Replace with `unknown` + type guards |
+| 🟢 Low | **Date locale**: `date.ts` formats with `en-US` instead of `pt-BR` | `src/shared/utils/date.ts` | Change to `pt-BR` locale |

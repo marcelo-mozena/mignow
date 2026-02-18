@@ -2,7 +2,8 @@ import { useCallback } from 'react';
 import type { ValidationError, ImportSummary } from '@/shared/types';
 import type { ImportContext } from '@/domain/interfaces/IImportService';
 import { validateImport, executeImport } from '@/infrastructure/api/import/importOrchestrator';
-import { useAuthStore, getBaseUrl, type Environment } from '@/presentation/stores/useAuthStore';
+import { useAuthStore } from '@/presentation/stores/useAuthStore';
+import { type Environment, getBaseUrl } from '@/shared/constants/environments';
 import { useOrgStore } from '@/presentation/stores/useOrgStore';
 
 /**

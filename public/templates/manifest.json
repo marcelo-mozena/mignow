@@ -4,6 +4,7 @@
     "manifest.json",
     "veiculos.csv",
     "veiculos_fabricantes.csv",
-    "veiculos_modelos.csv"
+    "veiculos_modelos.csv",
+    "usuarios.csv"
   ]
 }

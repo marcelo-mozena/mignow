@@ -29,6 +29,11 @@ export function clearRequestHistory() {
   store.setState({ history: [] });
 }
 
+/** Limpa o request atual e o histórico. */
+export function clearRequestLog() {
+  store.setState({ current: null, history: [] });
+}
+
 // --- Hooks ---
 
 export function useRequestLog(): RequestLogEntry | null {

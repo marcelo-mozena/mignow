@@ -5,6 +5,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  turbopack: {
+    resolveAlias: {
+      electron: { browser: './src/infrastructure/electron-api/types.d.ts' },
+    },
+  },
   webpack: config => {
     config.externals.push({
       electron: 'commonjs electron',

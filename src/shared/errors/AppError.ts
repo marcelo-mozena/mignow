@@ -3,7 +3,7 @@ export abstract class AppError extends Error {
     message: string,
     public readonly code: string,
     public readonly statusCode: number = 500,
-    public readonly details?: any
+    public readonly details?: unknown
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -22,7 +22,7 @@ export abstract class AppError extends Error {
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string, details?: any) {
+  constructor(message: string, details?: unknown) {
     super(message, 'VALIDATION_ERROR', 400, details);
   }
 }
@@ -52,19 +52,19 @@ export class ConflictError extends AppError {
 }
 
 export class InternalError extends AppError {
-  constructor(message: string = 'Internal server error', details?: any) {
+  constructor(message: string = 'Internal server error', details?: unknown) {
     super(message, 'INTERNAL_ERROR', 500, details);
   }
 }
 
 export class QueryError extends AppError {
-  constructor(message: string, details?: any) {
+  constructor(message: string, details?: unknown) {
     super(message, 'QUERY_ERROR', 500, details);
   }
 }
 
 export class CommandError extends AppError {
-  constructor(message: string, details?: any) {
+  constructor(message: string, details?: unknown) {
     super(message, 'COMMAND_ERROR', 500, details);
   }
 }

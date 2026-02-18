@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Eye, Copy, Check, History, Trash2 } from 'lucide-react';
+import { Eye, Copy, Check, History, Loader2, Trash2 } from 'lucide-react';
 import {
   useRequestLog,
   useRequestHistory,
@@ -10,6 +10,7 @@ import {
 } from '@/presentation/stores/useRequestLogStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/presentation/components/ui/button';
+import { Badge } from '@/presentation/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -31,12 +32,6 @@ const methodColors: Record<string, string> = {
   PUT: 'bg-bp-gold-3',
   PATCH: 'bg-bp-orange-3',
   DELETE: 'bg-bp-red-3',
-};
-
-const statusIcons: Record<string, string> = {
-  pending: '⏳',
-  success: '✅',
-  error: '❌',
 };
 
 function CopyButton({ text }: { text: string }) {
@@ -100,57 +95,72 @@ export function RequestFooter() {
   return (
     <>
       <footer className="fixed bottom-0 left-0 right-0 z-50 flex items-center gap-3 border-t border-border bg-[#2E3192] px-4 py-1.5 text-xs text-white font-mono shadow-lg">
-        <span className="text-bp-gray-3">{statusIcons[entry.status]}</span>
-        <span
-          className={cn(
-            'rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white',
-            footerMethodColor
-          )}
-        >
-          {entry.method}
-        </span>
-        <span className="truncate text-bp-gray-4">{entry.url}</span>
+        {/* Left side: status indicator + method + url */}
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {/* Spinning loader while pending, status code badge when done */}
+          {entry.status === 'pending' ? (
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-bp-light-gray-5" />
+          ) : entry.statusCode !== undefined ? (
+            <Badge
+              variant="outline"
+              className={cn(
+                'shrink-0 border-0 px-1.5 py-0 text-[10px] font-bold tabular-nums',
+                entry.statusCode < 400
+                  ? 'bg-bp-green-1 text-bp-green-5'
+                  : 'bg-bp-red-1 text-bp-red-5'
+              )}
+            >
+              {entry.statusCode}
+            </Badge>
+          ) : null}
 
-        {entry.status !== 'pending' && (
+          {/* HTTP method */}
+          <Badge
+            className={cn(
+              'shrink-0 border-0 px-1.5 py-0 text-[10px] font-bold uppercase tracking-wider text-white',
+              footerMethodColor
+            )}
+          >
+            {entry.method}
+          </Badge>
+
+          {/* URL */}
+          <span className="truncate text-bp-gray-4">{entry.url}</span>
+        </div>
+
+        {/* Right side: Detalhes + Histórico */}
+        <div className="flex shrink-0 items-center gap-1">
+          {entry.status !== 'pending' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-2 text-[10px] text-bp-light-gray-5 hover:text-white"
+              onClick={() => {
+                setSelectedEntry(null);
+                setDetailOpen(true);
+              }}
+            >
+              Detalhes
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="sm"
-            className="ml-1 h-6 gap-1 px-2 text-[10px] text-bp-light-gray-5 hover:text-white"
-            onClick={() => {
-              setSelectedEntry(null);
-              setDetailOpen(true);
-            }}
+            className="h-6 gap-1 px-2 text-[10px] text-bp-light-gray-5 hover:text-white"
+            onClick={() => setHistoryOpen(true)}
           >
-            <Eye className="h-3 w-3" />
-            Detalhes
-          </Button>
-        )}
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 gap-1 px-2 text-[10px] text-bp-light-gray-5 hover:text-white"
-          onClick={() => setHistoryOpen(true)}
-        >
-          <History className="h-3 w-3" />
-          Histórico
-          {history.length > 0 && (
-            <span className="rounded-full bg-bp-gray-3 px-1.5 text-[9px] text-white">
-              {history.length}
-            </span>
-          )}
-        </Button>
-
-        {entry.statusCode !== undefined && (
-          <span
-            className={cn(
-              'ml-auto rounded px-1.5 py-0.5 text-[10px] font-semibold',
-              entry.statusCode < 400 ? 'bg-bp-green-1 text-bp-green-5' : 'bg-bp-red-1 text-bp-red-5'
+            Histórico
+            {history.length > 0 && (
+              <Badge
+                variant="outline"
+                className="ml-0.5 h-4 shrink-0 border-bp-gray-3 bg-bp-gray-3 px-1.5 py-0 text-[9px] font-semibold text-white"
+              >
+                {history.length}
+              </Badge>
             )}
-          >
-            {entry.statusCode}
-          </span>
-        )}
+          </Button>
+        </div>
       </footer>
 
       {/* Detail Dialog */}
@@ -191,7 +201,9 @@ export function RequestFooter() {
                 <h3 className="text-sm font-semibold">Headers</h3>
                 <CopyButton
                   text={Object.entries(activeEntry.requestHeaders)
-                    .map(([k, v]) => `${k}: ${v}`)
+                    .map(
+                      ([k, v]) => `${k}: ${k.toLowerCase() === 'authorization' ? '[REDACTED]' : v}`
+                    )
                     .join('\n')}
                 />
               </div>
@@ -218,7 +230,7 @@ export function RequestFooter() {
 
       {/* History Dialog */}
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-w-3xl w-[80vw] h-[70vh] flex flex-col">
+        <DialogContent className="max-w-[60rem] w-[80vw] h-[70vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">

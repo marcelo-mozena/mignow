@@ -11,6 +11,7 @@ export interface OrgState {
   orgs: JwtOrg[];
   selectedOrgId: string;
   selectedCompanyId: string;
+  companyNames: Record<string, string>;
   envSaved: boolean;
   envPath: string;
 }
@@ -22,6 +23,7 @@ const store = createStore<OrgState>({
   orgs: [],
   selectedOrgId: '',
   selectedCompanyId: '',
+  companyNames: {},
   envSaved: false,
   envPath: '',
 });
@@ -32,9 +34,26 @@ export function setOrgsFromJwt(userName: string, orgs: JwtOrg[]) {
     orgs,
     selectedOrgId: '',
     selectedCompanyId: '',
+    companyNames: {},
     envSaved: false,
     envPath: '',
   });
+}
+
+/** Enriquece as orgs com nomes vindos da API. */
+export function updateOrgNames(nameMap: Record<string, string>) {
+  const current = store.getState();
+  const enriched = current.orgs.map(org => ({
+    ...org,
+    nome: nameMap[org.id] ?? org.nome,
+  }));
+  store.setState({ orgs: enriched });
+}
+
+/** Enriquece o mapa de nomes de empresas. */
+export function updateCompanyNames(nameMap: Record<string, string>) {
+  const current = store.getState();
+  store.setState({ companyNames: { ...current.companyNames, ...nameMap } });
 }
 
 export function setEnvSaved(envPath: string) {

@@ -5,9 +5,13 @@
 - Variáveis de ambiente apenas para configuração: URLs, connection strings, feature flags
 - Nomes descritivos para variáveis, métodos e classes
 - Funções pequenas com responsabilidade única
-- Evitar código duplicado (DRY)
+- Evitar código duplicado (DRY) — antes de criar qualquer util, helper ou tipo, verificar se já existe no projeto
+- Extrair padrões repetidos em factories, helpers ou abstrações genéricas (3+ repetições = hora de abstrair)
 - Preferir composição sobre herança
 - Validar todas as entradas de dados (requests, parâmetros, inputs)
-- Usar exceções específicas, nunca genéricas
+- Usar exceções específicas, nunca genéricas — usar `unknown` em vez de `any` em blocos catch
 - Não silenciar exceções sem tratamento adequado
+- Respeitar boundaries das camadas: infrastructure/ NUNCA importa de presentation/
+- Mensagens para o usuário final sempre em pt-BR, mensagens técnicas em inglês
+- Não logar dados sensíveis (tokens, senhas, PII) — redact headers de autenticação
 - Para code review sempre aplicar as instructions.md iniciadas com "sil-" uma vez que sao nossas instruções padrão corporativas
